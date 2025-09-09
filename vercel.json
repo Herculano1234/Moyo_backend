@@ -1,0 +1,16 @@
+{
+ "versão": 2,
+ "constrói": [
+  {
+   "origem": "src/index.js",
+   "usar": "@vercel/node",
+   "configuração": { "includeFiles": ["dist/**"] }
+  }
+ ],
+ "rotas": [
+  {
+   "origem": "/(.*)",
+   "destino": "src/index.js"
+  }
+ ]
+}
