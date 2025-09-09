@@ -1,15 +1,16 @@
 {
- "constrói": [
+ "version": 2,
+ "builds": [
   {
-   "origem": "src/index.js",
-   "usar": "@vercel/node",
-   "configuração": { "includeFiles": ["dist/**"] }
+   "src": "app.js",
+   "use": "@vercel/node",
+   "config": { "includeFiles": ["dist/**"] }
   }
  ],
- "rotas": [
+ "routes": [
   {
-   "origem": "/(.*)",
-   "destino": "src/index.js"
+   "src": "/(.*)",
+   "dest": "app.js"
   }
  ]
 }
