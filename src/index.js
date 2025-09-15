@@ -1,4 +1,4 @@
-
+import multer from "multer";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -8,6 +8,7 @@ import fs from "fs";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 
+const upload = multer();
 dotenv.config();
 
 const app = express();
@@ -498,12 +499,16 @@ app.get("/administradores_hospital", async (req, res) => {
   }
 });
 
-// Cadastrar administrador hospitalar
-app.post("/administradores_hospital", async (req, res) => {
-  const { nome, email, telefone, foto_url, data_nascimento, senha } = req.body;
+// Cadastrar administrador hospitalar (agora aceita multipart/form-data)
+app.post("/administradores_hospital", upload.single('foto_url'), async (req, res) => {
+  const { nome, email, telefone, data_nascimento, senha } = req.body;
+  let foto_url = req.body.foto_url;
+  // Se vier arquivo, pode salvar em disco ou serviço externo, aqui só pega o nome
+  if (req.file) {
+    foto_url = req.file.originalname; // ou salve o arquivo e use o path
+  }
   if (!nome || !email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
   try {
-    // Use hash de senha em produção!
     await pool.query(
       `INSERT INTO administradores_hospital (nome, email, telefone, foto_url, data_nascimento, senha)
        VALUES ($1, $2, $3, $4, $5, $6)`,
