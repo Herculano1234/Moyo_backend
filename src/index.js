@@ -1,3 +1,42 @@
+// Login de administrador hospitalar
+app.post("/login-adminhospital", async (req, res) => {
+  const { email, senha } = req.body;
+  if (!email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
+  try {
+    // Busca admin hospital
+    const result = await pool.query("SELECT * FROM administradores_hospital WHERE email = $1", [email]);
+    if (result.rows.length === 0) return res.status(401).json({ error: "Usuário não encontrado" });
+    const admin = result.rows[0];
+    // Se usar hash de senha, troque para bcrypt.compare
+    if (admin.senha !== senha) return res.status(401).json({ error: "Senha incorreta" });
+    // Buscar hospital vinculado (exemplo: supondo campo hospital_id)
+    let hospital = null;
+    if (admin.hospital_id) {
+      const hospRes = await pool.query("SELECT * FROM hospitais WHERE id = $1", [admin.hospital_id]);
+      hospital = hospRes.rows[0] || null;
+    }
+    res.json({ ...admin, hospital });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao autenticar admin hospital" });
+  }
+});
+
+// Login de admin geral (admin_moyo)
+app.post("/login-admin", async (req, res) => {
+  const { email, senha } = req.body;
+  if (!email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
+  try {
+    // Busca admin geral
+    const result = await pool.query("SELECT * FROM admin_moyo WHERE email = $1", [email]);
+    if (result.rows.length === 0) return res.status(401).json({ error: "Usuário não encontrado" });
+    const admin = result.rows[0];
+    // Se usar hash de senha, troque para bcrypt.compare
+    if (admin.senha !== senha) return res.status(401).json({ error: "Senha incorreta" });
+    res.json(admin);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao autenticar admin geral" });
+  }
+});
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
