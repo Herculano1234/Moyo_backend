@@ -111,3 +111,5 @@ CREATE TABLE IF NOT EXISTS administradores_moyo (
   senha VARCHAR(100) NOT NULL,
   data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
