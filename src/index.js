@@ -1,3 +1,4 @@
+
 import multer from "multer";
 import express from "express";
 import cors from "cors";
@@ -47,6 +48,15 @@ app.get("/hospitais", async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar hospitais" });
+  }
+});
+// Listar administradores do moyo via POST
+app.post("/administradores_moyo", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM administradores_moyo ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar administradores do moyo" });
   }
 });
 // Login de administrador hospitalar
