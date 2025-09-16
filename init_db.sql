@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS administradores_hospital (
   foto_url TEXT,
   data_nascimento DATE,
   senha VARCHAR(100) NOT NULL,
+  hospital_id INT REFERENCES hospitais(id),
   data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -110,6 +111,3 @@ CREATE TABLE IF NOT EXISTS administradores_moyo (
   senha VARCHAR(100) NOT NULL,
   data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO administradores_moyo (nome, email, telefone, foto_url, data_nascimento, senha)
-VALUES ('Herculano G. A', 'admin@moyo.com', '11999999999', NULL, '1990-01-01', 'senha123')
-ON CONFLICT (email) DO NOTHING;
