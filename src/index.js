@@ -51,10 +51,10 @@ app.get("/hospitais", async (req, res) => {
   }
 });
 // Listar administradores do moyo via POST
-app.post("/administradores_moyo", async (req, res) => {
+app.get("/administradores_moyo", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM administradores_moyo ORDER BY id DESC");
-    res.json(result.rows);
+    const { rows } = await pool.query("SELECT * FROM administradores_moyo ORDER BY id DESC");
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar administradores do moyo" });
   }
@@ -87,12 +87,17 @@ app.post("/login-admin", async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
   try {
-    // Busca admin geral
-    const result = await pool.query("SELECT * FROM admin_moyo WHERE email = $1", [email]);
+    // Busca admin geral na tabela correta
+    const result = await pool.query("SELECT * FROM administradores_moyo WHERE email = $1", [email]);
     if (result.rows.length === 0) return res.status(401).json({ error: "Usuário não encontrado" });
     const admin = result.rows[0];
     // Se usar hash de senha, troque para bcrypt.compare
-    if (admin.senha !== senha) return res.status(401).json({ error: "Senha incorreta" });
+    if (admin.senha_hash) {
+      const match = await bcrypt.compare(senha, admin.senha_hash);
+      if (!match) return res.status(401).json({ error: "Senha incorreta" });
+    } else {
+      if (admin.senha !== senha) return res.status(401).json({ error: "Senha incorreta" });
+    }
     res.json(admin);
   } catch (err) {
     res.status(500).json({ error: "Erro ao autenticar admin geral" });
