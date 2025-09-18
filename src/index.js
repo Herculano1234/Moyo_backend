@@ -1,3 +1,21 @@
+// Aprovar ou rejeitar profissional
+app.put("/profissionais/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!['aprovado', 'pendente', 'rejeitado'].includes(status)) {
+    return res.status(400).json({ error: "Status inválido." });
+  }
+  try {
+    const result = await pool.query(
+      "UPDATE profissionais SET status = $1 WHERE id = $2 RETURNING id, status",
+      [status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Profissional não encontrado." });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar status do profissional." });
+  }
+});
 import express from 'express';
 import cors from 'cors';
 import examesRoutes from './routes/exames.js';
@@ -172,6 +190,14 @@ app.get("/pacientes", async (req, res) => {
 app.get("/pacientesf", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT id, nome, email, data_nascimento, sexo, telefone, endereco, bi FROM pacientes");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar pacientes" });
+  }
+});
+app.get("/profissionaisf", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT nome, data_nascimento, bi, sexo, morada, email, telefone, unidade, municipio, especialidade, cargo, registro_profissional, senha_hash, status FROM pacientes");
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar pacientes" });
@@ -490,6 +516,7 @@ app.delete("/hospitais/:id", async (req, res) => {
   }
 });
 
+// Listar profissionais
 // Login de profissional
 app.post("/login-profissional", async (req, res) => {
   const { email, senha } = req.body;
