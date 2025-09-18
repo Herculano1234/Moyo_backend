@@ -523,10 +523,6 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
 
-app.use(loginProfissionalRoutes);
-// ...existing code...
-// --- ENVIO DE CÓDIGO DE VERIFICAÇÃO POR EMAIL ---
-
 
 // Configure o transporter do Nodemailer
 const transporter = nodemailer.createTransport({
