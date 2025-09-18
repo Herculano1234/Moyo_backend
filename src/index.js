@@ -73,7 +73,7 @@ app.get("/verificar-email", async (req, res) => {
 });
 
 // Login de administrador hospitalar
-app.post("/adminhospital", async (req, res) => {
+app.post("/login-adminhospital", async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
   try {
@@ -522,6 +522,8 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+app.use(loginProfissionalRoutes);
 // ...existing code...
 // --- ENVIO DE CÓDIGO DE VERIFICAÇÃO POR EMAIL ---
 
