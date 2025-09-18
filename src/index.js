@@ -522,8 +522,6 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-app.use(loginProfissionalRoutes);
 // ...existing code...
 // --- ENVIO DE CÓDIGO DE VERIFICAÇÃO POR EMAIL ---
 
