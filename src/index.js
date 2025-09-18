@@ -1,7 +1,8 @@
+import express from 'express';
+import cors from 'cors';
+import examesRoutes from './routes/exames.js';
 
 import multer from "multer";
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
@@ -18,9 +19,9 @@ app.use(express.json({ limit: '10mb' }));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
+  ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
-  }
+  } : false
 });
 
 
@@ -561,4 +562,4 @@ app.delete("/administradores_hospital/:id", async (req, res) => {
   }
 });
 
-// ...existing code...
+app.use('/api/exames', examesRoutes);

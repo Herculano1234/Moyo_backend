@@ -1,4 +1,3 @@
-
 -- Script de inicialização do banco de dados PostgreSQL para o projeto Moyo
 CREATE TABLE IF NOT EXISTS hospitais (
     id SERIAL PRIMARY KEY,
@@ -113,3 +112,21 @@ CREATE TABLE IF NOT EXISTS administradores_moyo (
 );
 
 
+-- Atualizar tabela de exames
+CREATE TABLE IF NOT EXISTS exames (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    disponivel BOOLEAN DEFAULT true,
+    profissional_id INTEGER REFERENCES profissionais(id),
+    paciente_id INTEGER REFERENCES pacientes(id),
+    hospital_id INTEGER REFERENCES hospitais(id),
+    data_hora TIMESTAMP NOT NULL,
+    status VARCHAR(50) DEFAULT 'pendente',
+    resultado TEXT,
+    observacoes TEXT,
+    done_count INTEGER DEFAULT 0,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_hospital FOREIGN KEY (hospital_id) REFERENCES hospitais(id),
+    CONSTRAINT fk_profissional FOREIGN KEY (profissional_id) REFERENCES profissionais(id),
+    CONSTRAINT fk_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+);
