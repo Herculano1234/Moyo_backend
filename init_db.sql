@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS profissionais (
     registro_profissional VARCHAR(50) NOT NULL,
     foto_perfil TEXT NOT NULL,
     senha_hash VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pendente',
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -142,3 +143,6 @@ CREATE TABLE IF NOT EXISTS exames (
     CONSTRAINT fk_profissional FOREIGN KEY (profissional_id) REFERENCES profissionais(id),
     CONSTRAINT fk_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
+-- Adicionar coluna 'status' na tabela de profissionais
+ALTER TABLE profissionais
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pendente';

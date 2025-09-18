@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import examesRoutes from './routes/exames.js';
-
 import multer from "multer";
 import dotenv from "dotenv";
 import { Pool } from "pg";
@@ -9,7 +8,8 @@ import bcrypt from "bcryptjs";
 import fs from "fs";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-
+// import loginProfissionalRoutes from './loginProfissional.js'; // Removido para evitar conflito
+import nodemailer from "nodemailer";
 const upload = multer();
 dotenv.config();
 
@@ -308,10 +308,10 @@ app.post("/profissionais", async (req, res) => {
     const hash = await bcrypt.hash(senha, 10);
     const result = await pool.query(
       `INSERT INTO profissionais (
-        nome, data_nascimento, bi, sexo, morada, email, telefone, unidade, municipio, especialidade, cargo, registro_profissional, foto_perfil, senha_hash
+        nome, data_nascimento, bi, sexo, morada, email, telefone, unidade, municipio, especialidade, cargo, registro_profissional, foto_perfil, senha_hash, status
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
-      ) RETURNING id, nome, email, especialidade, foto_perfil`,
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+      ) RETURNING id, nome, email, especialidade, foto_perfil, status`,
       [
         nome,
         data_nascimento,
@@ -326,7 +326,8 @@ app.post("/profissionais", async (req, res) => {
         cargo,
         registro_profissional,
         foto_perfil,
-        hash
+        hash,
+        'pendente'
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -515,9 +516,10 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
 
+app.use(loginProfissionalRoutes);
 // ...existing code...
 // --- ENVIO DE CÓDIGO DE VERIFICAÇÃO POR EMAIL ---
-import nodemailer from "nodemailer";
+
 
 // Configure o transporter do Nodemailer
 const transporter = nodemailer.createTransport({
