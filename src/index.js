@@ -59,6 +59,18 @@ app.get("/administradores_moyo", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar administradores do moyo" });
   }
 });
+// Verificar se o e-mail já está cadastrado
+app.get("/verificar-email", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "E-mail obrigatório" });
+  try {
+    const result = await pool.query("SELECT id FROM pacientes WHERE email = $1", [email]);
+    res.json({ exists: result.rows.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao verificar e-mail" });
+  }
+});
+
 // Login de administrador hospitalar
 app.post("/login-adminhospital", async (req, res) => {
   const { email, senha } = req.body;
