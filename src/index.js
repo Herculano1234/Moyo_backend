@@ -73,7 +73,7 @@ app.get("/verificar-email", async (req, res) => {
 });
 
 // Login de administrador hospitalar
-app.post("/login-adminhospital", async (req, res) => {
+app.post("/adminhospital", async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
   try {
@@ -237,8 +237,15 @@ app.get("/consultas", async (req, res) => {
 });
 // Listar profissionais
 app.get("/profissionais", async (req, res) => {
+  const { unidade } = req.query;
   try {
-    const { rows } = await pool.query("SELECT nome, data_nascimento, bi, sexo, morada, email, telefone, unidade, municipio, especialidade, cargo, registro_profissional FROM profissionais");
+    let query = "SELECT * FROM profissionais";
+    let params = [];
+    if (unidade) {
+      query += " WHERE unidade = $1";
+      params.push(unidade);
+    }
+    const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar profissionais" });
