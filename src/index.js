@@ -503,6 +503,35 @@ app.listen(PORT, () => {
 });
 
 // ...existing code...
+// --- ENVIO DE CÓDIGO DE VERIFICAÇÃO POR EMAIL ---
+import nodemailer from "nodemailer";
+
+// Configure o transporter do Nodemailer
+const transporter = nodemailer.createTransport({
+  service: "gmail", // ou outro serviço
+  auth: {
+    user: process.env.EMAIL_USER, // defina no .env
+    pass: process.env.EMAIL_PASS, // defina no .env
+  },
+});
+
+// Rota para enviar código de verificação
+app.post("/enviar-codigo-verificacao", async (req, res) => {
+  const { email, codigo } = req.body;
+  if (!email || !codigo) return res.status(400).json({ error: "Email e código são obrigatórios" });
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Seu código de verificação Moyo Saúde",
+      text: `Seu código de verificação é: ${codigo}`,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erro ao enviar e-mail de verificação:", err);
+    res.status(500).json({ error: "Erro ao enviar e-mail de verificação" });
+  }
+});
 
 // Listar administradores hospitalares
 app.get("/administradores_hospital", async (req, res) => {
