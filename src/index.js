@@ -1,3 +1,21 @@
+// Aprovar ou rejeitar profissional
+app.put("/profissionais/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!status || !["aprovado", "rejeitado", "pendente"].includes(status)) {
+    return res.status(400).json({ error: "Status inválido" });
+  }
+  try {
+    const result = await pool.query(
+      "UPDATE profissionais SET status = $1 WHERE id = $2 RETURNING id, nome, email, status",
+      [status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Profissional não encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar status do profissional" });
+  }
+});
 import express from 'express';
 import cors from 'cors';
 import examesRoutes from './routes/exames.js';
