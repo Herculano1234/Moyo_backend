@@ -568,21 +568,29 @@ app.get("/administradores_hospital", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar administradores hospitalares" });
   }
 });
+app.get("/admh", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM administradores_hospital");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar profissionais" });
+  }
+});
 
 // Cadastrar administrador hospitalar (agora aceita multipart/form-data)
 app.post("/administradores_hospital", upload.single('foto_url'), async (req, res) => {
-  const { nome, email, telefone, data_nascimento, senha } = req.body;
+  const { nome, email, telefone, data_nascimento, senha, hospital_id } = req.body;
   let foto_url = req.body.foto_url;
   // Se vier arquivo, pode salvar em disco ou serviço externo, aqui só pega o nome
   if (req.file) {
     foto_url = req.file.originalname; // ou salve o arquivo e use o path
   }
-  if (!nome || !email || !senha) return res.status(400).json({ error: "Campos obrigatórios" });
+  if (!nome || !email || !senha || !hospital_id) return res.status(400).json({ error: "Campos obrigatórios (inclua hospital_id)" });
   try {
     await pool.query(
-      `INSERT INTO administradores_hospital (nome, email, telefone, foto_url, data_nascimento, senha)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [nome, email, telefone, foto_url, data_nascimento, senha]
+      `INSERT INTO administradores_hospital (nome, email, telefone, foto_url, data_nascimento, senha, hospital_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [nome, email, telefone, foto_url, data_nascimento, senha, hospital_id]
     );
     res.status(201).json({ success: true });
   } catch (err) {
