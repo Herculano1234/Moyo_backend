@@ -84,12 +84,13 @@ app.post("/login-adminhospital", async (req, res) => {
     // Se usar hash de senha, troque para bcrypt.compare
     if (admin.senha !== senha) return res.status(401).json({ error: "Senha incorreta" });
     // Buscar hospital vinculado (exemplo: supondo campo hospital_id)
-    let hospital = null;
+    let hospital_nome = null;
     if (admin.hospital_id) {
-      const hospRes = await pool.query("SELECT * FROM hospitais WHERE id = $1", [admin.hospital_id]);
-      hospital = hospRes.rows[0] || null;
+      const hospRes = await pool.query("SELECT nome FROM hospitais WHERE id = $1", [admin.hospital_id]);
+      hospital_nome = hospRes.rows.length > 0 ? hospRes.rows[0].nome : null;
     }
-    res.json({ ...admin, hospital });
+    // Retornar o nome do hospital no campo 'hospital' para o frontend
+    res.json({ ...admin, hospital: hospital_nome });
   } catch (err) {
     res.status(500).json({ error: "Erro ao autenticar admin hospital" });
   }
