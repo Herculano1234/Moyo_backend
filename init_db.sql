@@ -145,4 +145,7 @@ CREATE TABLE IF NOT EXISTS exames (
 );
 -- Adicionar coluna 'status' na tabela de administradores_hospital
 ALTER TABLE administradores_hospital
-ADD COLUMN IF NOT EXISTS hospital_id INT REFERENCES hospitais(id),
+ADD COLUMN IF NOT EXISTS hospital_id INT REFERENCES hospitais(id);
+
+INSERT INTO administradores_hospital (nome, email, telefone, foto_url, data_nascimento, senha, hospital_id)
+VALUES ('Lany', 'lany@moyo.com', '11999999999', NULL, '1990-01-01', 'senha123', 1);
