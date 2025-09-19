@@ -143,6 +143,6 @@ CREATE TABLE IF NOT EXISTS exames (
     CONSTRAINT fk_profissional FOREIGN KEY (profissional_id) REFERENCES profissionais(id),
     CONSTRAINT fk_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
--- Adicionar coluna 'status' na tabela de profissionais
-ALTER TABLE profissionais
-ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pendente';
+-- Adicionar coluna 'status' na tabela de administradores_hospital
+ALTER TABLE administradores_hospital
+ADD COLUMN IF NOT EXISTS hospital_id INT REFERENCES hospitais(id),
