@@ -92,6 +92,14 @@ app.post("/exames-catalogo", async (req, res) => {
     res.status(500).json({ error: "Erro ao cadastrar exame no catálogo" });
   }
 });
+app.get("/exames-catalogo1", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT id, tipo, disponivel, unidade FROM exames_catalogo");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar exames do catálogo" });
+  }
+});
 // Listar tipos de exame disponíveis no hospital (catálogo)
 app.get("/exames-catalogo", async (req, res) => {
   const { unidade } = req.query;
