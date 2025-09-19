@@ -1,3 +1,46 @@
+// Cadastro de tipo de exame disponível no hospital (catálogo)
+app.post("/exames-catalogo", async (req, res) => {
+  const { tipo, disponivel, unidade } = req.body;
+  if (!tipo || !unidade) return res.status(400).json({ error: "Campos obrigatórios" });
+  try {
+    // Crie a tabela exames_catalogo se não existir
+    await pool.query(`CREATE TABLE IF NOT EXISTS exames_catalogo (
+      id SERIAL PRIMARY KEY,
+      tipo VARCHAR(100) NOT NULL,
+      disponivel BOOLEAN DEFAULT TRUE,
+      unidade VARCHAR(100) NOT NULL
+    )`);
+    const result = await pool.query(
+      `INSERT INTO exames_catalogo (tipo, disponivel, unidade) VALUES ($1, $2, $3) RETURNING *`,
+      [tipo, disponivel ?? true, unidade]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao cadastrar exame no catálogo" });
+  }
+});
+// Listar tipos de exame disponíveis no hospital (catálogo)
+app.get("/exames-catalogo", async (req, res) => {
+  const { unidade } = req.query;
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS exames_catalogo (
+      id SERIAL PRIMARY KEY,
+      tipo VARCHAR(100) NOT NULL,
+      disponivel BOOLEAN DEFAULT TRUE,
+      unidade VARCHAR(100) NOT NULL
+    )`);
+    let query = "SELECT * FROM exames_catalogo";
+    let params = [];
+    if (unidade) {
+      query += " WHERE unidade = $1";
+      params.push(unidade);
+    }
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar exames do catálogo" });
+  }
+});
 import express from 'express';
 import cors from 'cors';
 import examesRoutes from './routes/exames.js';
