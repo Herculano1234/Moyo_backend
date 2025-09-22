@@ -570,7 +570,11 @@ app.post("/login-profissional", async (req, res) => {
     const prof = result.rows[0];
     const match = await bcrypt.compare(senha, prof.senha_hash);
     if (!match) return res.status(401).json({ error: "Senha incorreta" });
-    res.json({ id: prof.id, nome: prof.nome, email: prof.email, especialidade: prof.especialidade, foto_perfil: prof.foto_perfil });
+    // Bloquear login se status diferente de aprovado ou active
+    if (prof.status !== "aprovado" && prof.status !== "active") {
+      return res.status(403).json({ error: "Seu perfil ainda não está aprovado. Entre em contato com o administrador do hospital para aprovação do seu cadastro." });
+    }
+    res.json({ id: prof.id, nome: prof.nome, email: prof.email, especialidade: prof.especialidade, foto_perfil: prof.foto_perfil, status: prof.status });
   } catch (err) {
     res.status(500).json({ error: "Erro ao autenticar profissional" });
   }
