@@ -3,99 +3,101 @@ import pkg from 'pg';
 const { Pool } = pkg;
 
 const router = express.Router();
+const pool = new Pool();
 
-const pool = new Pool({
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  host: process.env.PGHOST,
-  port: process.env.PGPORT
-});
-
-// Buscar exames por hospital
-router.get('/hospital/:hospitalId', async (req, res) => {
+// Listar todos os exames
+router.get('/', async (req, res) => {
   try {
-    const { hospitalId } = req.params;
-    const query = `
-      SELECT e.*, p.nome as profissional_nome, p.especialidade
+    const { rows } = await pool.query(`
+      SELECT e.*, p.nome as paciente_nome, pr.nome as profissional_nome 
       FROM exames e
-      LEFT JOIN profissionais p ON e.profissional_id = p.id
-      WHERE e.hospital_id = $1
-      ORDER BY e.criado_em DESC
-    `;
-    const { rows } = await pool.query(query, [hospitalId]);
+      LEFT JOIN pacientes p ON e.paciente_id = p.id
+      LEFT JOIN profissionais pr ON e.profissional_id = pr.id
+      ORDER BY e.data_hora DESC
+    `);
     res.json(rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao buscar exames' });
+  } catch (erro) {
+    console.error('Erro ao buscar exames:', erro);
+    res.status(500).json({ erro: 'Erro ao buscar exames' });
   }
 });
 
 // Criar novo exame
 router.post('/', async (req, res) => {
+  const { nome, data_hora, paciente_id, hospital_id } = req.body;
+  
   try {
-    const { nome, hospital_id, data_hora, status } = req.body;
-    const query = `
-      INSERT INTO exames (nome, hospital_id, data_hora, status)
-      VALUES ($1, $2, $3, $4)
+    const { rows } = await pool.query(`
+      INSERT INTO exames (nome, data_hora, paciente_id, hospital_id, status, disponivel)
+      VALUES ($1, $2, $3, $4, 'pendente', true)
       RETURNING *
-    `;
-    const { rows } = await pool.query(query, [nome, hospital_id, data_hora, status]);
+    `, [nome, data_hora, paciente_id, hospital_id]);
+    
     res.status(201).json(rows[0]);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao criar exame' });
+  } catch (erro) {
+    console.error('Erro ao criar exame:', erro);
+    res.status(500).json({ erro: 'Erro ao criar exame' });
   }
 });
 
-// Atualizar disponibilidade do exame
+// Atualizar status do exame
 router.patch('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status, profissional_id } = req.body;
+
   try {
-    const { id } = req.params;
-    const { disponivel } = req.body;
-    const query = `
+    const { rows } = await pool.query(`
       UPDATE exames 
-      SET disponivel = $1
-      WHERE id = $2
+      SET status = $1, profissional_id = $2
+      WHERE id = $3
       RETURNING *
-    `;
-    const { rows } = await pool.query(query, [disponivel, id]);
+    `, [status, profissional_id, id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ erro: 'Exame não encontrado' });
+    }
+
     res.json(rows[0]);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atualizar exame' });
+  } catch (erro) {
+    console.error('Erro ao atualizar exame:', erro);
+    res.status(500).json({ erro: 'Erro ao atualizar exame' });
   }
 });
 
-// Atribuir exame a médico
-router.patch('/:id/assign', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { profissional_id } = req.body;
-    const query = `
-      UPDATE exames 
-      SET profissional_id = $1
-      WHERE id = $2
-      RETURNING *
-    `;
-    const { rows } = await pool.query(query, [profissional_id, id]);
-    res.json(rows[0]);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atribuir exame' });
-  }
-});
-
-// Deletar exame
+// Excluir exame
 router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    const query = 'DELETE FROM exames WHERE id = $1 RETURNING *';
-    const { rows } = await pool.query(query, [id]);
-    res.json(rows[0]);
+    const { rows } = await pool.query('DELETE FROM exames WHERE id = $1 RETURNING *', [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ erro: 'Exame não encontrado' });
+    }
+
+    res.json({ mensagem: 'Exame excluído com sucesso' });
+  } catch (erro) {
+    console.error('Erro ao excluir exame:', erro);
+    res.status(500).json({ erro: 'Erro ao excluir exame' });
+  }
+});
+
+// Buscar exames do paciente
+router.get('/paciente/:pacienteId', async (req, res) => {
+  try {
+    console.log('Buscando exames para paciente:', req.params.pacienteId); // Debug
+    const { pacienteId } = req.params;
+    const query = `
+      SELECT * FROM exames 
+      WHERE paciente_id = $1 
+      ORDER BY data_hora DESC
+    `;
+    const { rows } = await pool.query(query, [pacienteId]);
+    console.log('Exames encontrados:', rows); // Debug
+    res.json(rows);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao deletar exame' });
+    console.error('Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar exames' });
   }
 });
 
