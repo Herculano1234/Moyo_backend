@@ -698,3 +698,177 @@ app.delete("/administradores_hospital/:id", async (req, res) => {
 });
 
 app.use('/api/exames', examesRoutes);
+// Listar horários do hospital
+app.get("/hospitais/:hospitalId/schedules", async (req, res) => {
+  const { hospitalId } = req.params;
+  const { type } = req.query; // 'consultation' ou 'exam'
+  try {
+    let query = "SELECT * FROM hospital_schedules WHERE hospital_id = $1";
+    let params = [hospitalId];
+    if (type) {
+      query += " AND type = $2";
+      params.push(type);
+    }
+    query += " ORDER BY time_slot";
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar horários do hospital" });
+  }
+});
+
+// Adicionar horário
+app.post("/hospitais/:hospitalId/schedules", async (req, res) => {
+  const { hospitalId } = req.params;
+  const { type, time_slot, professionals, rooms, patients_per_slot } = req.body;
+  if (!type || !time_slot || patients_per_slot === undefined) {
+    return res.status(400).json({ error: "Campos obrigatórios: type, time_slot, patients_per_slot" });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO hospital_schedules (hospital_id, type, time_slot, professionals, rooms, patients_per_slot)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [hospitalId, type, time_slot, professionals, rooms, patients_per_slot]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao adicionar horário" });
+  }
+});
+
+// Remover horário
+app.delete("/hospitais/schedules/:scheduleId", async (req, res) => {
+  const { scheduleId } = req.params;
+  try {
+    const result = await pool.query("DELETE FROM hospital_schedules WHERE id = $1 RETURNING *", [scheduleId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Horário não encontrado" });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao remover horário" });
+  }
+});
+
+// ===== Endpoints para tabela horarios_hospital =====
+
+// Listar horários (opcional filtro por hospital_id)
+app.get("/horarios_hospital", async (req, res) => {
+  const { hospital_id } = req.query;
+  try {
+    let query = "SELECT * FROM horarios_hospital";
+    const params = [];
+    if (hospital_id) {
+      query += " WHERE hospital_id = $1";
+      params.push(Number(hospital_id));
+    }
+    query += " ORDER BY criado_em DESC";
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro GET /horarios_hospital", err);
+    res.status(500).json({ error: "Erro ao buscar horarios_hospital" });
+  }
+});
+
+// Obter um horário por id
+app.get("/horarios_hospital/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query("SELECT * FROM horarios_hospital WHERE id = $1", [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro GET /horarios_hospital/:id", err);
+    res.status(500).json({ error: "Erro ao buscar registro" });
+  }
+});
+
+// Criar novo horário_hospital
+app.post("/horarios_hospital", async (req, res) => {
+  try {
+    const {
+      hospital_id,
+      nome_hospital = null,
+      dias_semana = null,        // espera array de strings
+      horario_matriz = null,     // espera objeto/array (JSON)
+      tipo_servico = null,       // espera array de strings
+      vagas_por_hora = null,     // espera array de ints
+      observacoes = null
+    } = req.body;
+
+    if (!hospital_id) return res.status(400).json({ error: "Campo hospital_id é obrigatório" });
+
+    const result = await pool.query(
+      `INSERT INTO horarios_hospital
+       (hospital_id, nome_hospital, dias_semana, horario_matriz, tipo_servico, vagas_por_hora, observacoes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        Number(hospital_id),
+        nome_hospital,
+        Array.isArray(dias_semana) ? dias_semana : null,
+        horario_matriz ? JSON.stringify(horario_matriz) : null,
+        Array.isArray(tipo_servico) ? tipo_servico : null,
+        Array.isArray(vagas_por_hora) ? vagas_por_hora.map(Number) : null,
+        observacoes
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro POST /horarios_hospital", err);
+    res.status(500).json({ error: "Erro ao criar registro horarios_hospital" });
+  }
+});
+
+// Atualizar parcialmente um registro
+app.patch("/horarios_hospital/:id", async (req, res) => {
+  const { id } = req.params;
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  const updatable = {
+    hospital_id: v => Number(v),
+    nome_hospital: v => v,
+    dias_semana: v => Array.isArray(v) ? v : null,
+    horario_matriz: v => v ? JSON.stringify(v) : null,
+    tipo_servico: v => Array.isArray(v) ? v : null,
+    vagas_por_hora: v => Array.isArray(v) ? v.map(Number) : null,
+    observacoes: v => v
+  };
+
+  try {
+    for (const key of Object.keys(updatable)) {
+      if (req.body[key] !== undefined) {
+        fields.push(`${key} = $${idx}`);
+        values.push(updatable[key](req.body[key]));
+        idx++;
+      }
+    }
+
+    if (fields.length === 0) return res.status(400).json({ error: "Nenhum campo para atualizar" });
+
+    values.push(id);
+    const query = `UPDATE horarios_hospital SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const { rows } = await pool.query(query, values);
+    if (rows.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro PATCH /horarios_hospital/:id", err);
+    res.status(500).json({ error: "Erro ao atualizar registro" });
+  }
+});
+
+// Deletar um registro
+app.delete("/horarios_hospital/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query("DELETE FROM horarios_hospital WHERE id = $1 RETURNING *", [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erro DELETE /horarios_hospital/:id", err);
+    res.status(500).json({ error: "Erro ao remover registro" });
+  }
+});

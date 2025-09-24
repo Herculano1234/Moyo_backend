@@ -1,4 +1,3 @@
--- Script de inicialização do banco de dados PostgreSQL para o projeto Moyo
 CREATE TABLE IF NOT EXISTS hospitais (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -37,11 +36,16 @@ CREATE TABLE IF NOT EXISTS hospitais (
     acessibilidade VARCHAR(10),
     estacionamento VARCHAR(100),
     status VARCHAR(30),
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- horários de atendimento (consultas e exames separados)
+    horarios_atendimento_consultas JSONB DEFAULT '[]'::jsonb,
+    horarios_atendimento_exames JSONB DEFAULT '[]'::jsonb
 );
 
 
--- Criar tabela de pacientes
+-- ==============================
+-- Tabela de Pacientes
+-- ==============================
 CREATE TABLE IF NOT EXISTS pacientes (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
@@ -56,7 +60,9 @@ CREATE TABLE IF NOT EXISTS pacientes (
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Criar tabela de profissionais
+-- ==============================
+-- Tabela de Profissionais
+-- ==============================
 CREATE TABLE IF NOT EXISTS profissionais (
     id SERIAL PRIMARY KEY,
     hospital_id INT REFERENCES hospitais(id),
@@ -78,31 +84,25 @@ CREATE TABLE IF NOT EXISTS profissionais (
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ==============================
+-- Tabela de Administradores de Hospital
+-- ==============================
 CREATE TABLE IF NOT EXISTS administradores_hospital (
-  id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  telefone VARCHAR(20),
-  foto_url TEXT,
-  data_nascimento DATE,
-  senha VARCHAR(100) NOT NULL,
-  hospital_id INT REFERENCES hospitais(id),
-  data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS exames (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
-    disponivel BOOLEAN DEFAULT true,
-    profissional_id INT REFERENCES profissionais(id),
-    paciente_id INT REFERENCES pacientes(id),
+    email VARCHAR(100) UNIQUE NOT NULL,
+    telefone VARCHAR(20),
+    foto_url TEXT,
+    data_nascimento DATE,
+    senha VARCHAR(100) NOT NULL,
     hospital_id INT REFERENCES hospitais(id),
-    data_hora TIMESTAMP NOT NULL,
-    status VARCHAR(20) DEFAULT 'agendado',
-    resultado TEXT,
-    observacoes TEXT,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(30) DEFAULT 'ativo'
 );
--- Criar tabela de consultas
+
+-- ==============================
+-- Tabela de Consultas
+-- ==============================
 CREATE TABLE IF NOT EXISTS consultas (
     id SERIAL PRIMARY KEY,
     paciente_id INT REFERENCES pacientes(id) ON DELETE CASCADE,
@@ -113,19 +113,10 @@ CREATE TABLE IF NOT EXISTS consultas (
     local VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS administradores_moyo (
-  id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  telefone VARCHAR(20),
-  foto_url TEXT,
-  data_nascimento DATE,
-  senha VARCHAR(100) NOT NULL,
-  data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
-
--- Atualizar tabela de exames
+-- ==============================
+-- Tabela de Exames
+-- ==============================
 CREATE TABLE IF NOT EXISTS exames (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -143,103 +134,42 @@ CREATE TABLE IF NOT EXISTS exames (
     CONSTRAINT fk_profissional FOREIGN KEY (profissional_id) REFERENCES profissionais(id),
     CONSTRAINT fk_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
--- Adicionar coluna 'status' na tabela de administradores_hospital
 
--- Criar tabela de configuração de horários
-CREATE TABLE IF NOT EXISTS horarios_config (
+-- ==============================
+-- Tabela de Administradores do Sistema Moyo
+-- ==============================
+CREATE TABLE IF NOT EXISTS administradores_moyo (
     id SERIAL PRIMARY KEY,
-    hospital_id INTEGER REFERENCES hospitais(id),
-    tipo VARCHAR(20) NOT NULL, -- 'consulta' ou 'exame'
-    hora_inicio TIME NOT NULL,
-    hora_fim TIME NOT NULL,
-    num_profissionais INTEGER NOT NULL,
-    atendimentos_por_hora INTEGER NOT NULL,
-    dias_semana TEXT[], -- array com dias da semana ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hospital FOREIGN KEY (hospital_id) REFERENCES hospitais(id)
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    telefone VARCHAR(20),
+    foto_url TEXT,
+    data_nascimento DATE,
+    senha VARCHAR(100) NOT NULL,
+    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Criar tabela de slots de horário
-CREATE TABLE IF NOT EXISTS horarios_slots (
-    id SERIAL PRIMARY KEY,
-    hospital_id INTEGER REFERENCES hospitais(id),
-    tipo VARCHAR(20) NOT NULL, -- 'consulta' ou 'exame'
-    data_hora TIMESTAMP NOT NULL,
-    vagas_totais INTEGER NOT NULL,
-    vagas_ocupadas INTEGER DEFAULT 0,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hospital FOREIGN KEY (hospital_id) REFERENCES hospitais(id)
-);
 
--- Criar tabela de horários dos hospitais
-CREATE TABLE IF NOT EXISTS horario_hospitais (
+CREATE TABLE IF NOT EXISTS hospital_schedules (
     id SERIAL PRIMARY KEY,
-    hospital_id INTEGER REFERENCES hospitais(id),
-    nome_hospital VARCHAR(255) NOT NULL,
-    dias_semana TEXT[] NOT NULL, -- ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo']
-    horario_matriz JSONB NOT NULL, -- Matriz de horários em formato JSON
-    tipo_servico VARCHAR(50)[], -- ['consulta', 'exame', 'urgencia', etc]
-    vagas_por_hora INTEGER[], -- [20, 15, 30] etc
+    hospital_id INT NOT NULL REFERENCES hospitais(id) ON DELETE CASCADE,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('consultation', 'exam')),
+    time_slot VARCHAR(50) NOT NULL,
+    professionals INT,
+    rooms INT,
+    patients_per_slot INT NOT NULL,
+    UNIQUE(hospital_id, time_slot, type)
+
+    
+);
+CREATE TABLE IF NOT EXISTS horarios_hospital (
+    id SERIAL PRIMARY KEY,
+    hospital_id INT REFERENCES hospitais(id) ON DELETE CASCADE,
+    nome_hospital VARCHAR(255),
+    dias_semana TEXT[],
+    horario_matriz JSONB,
+    tipo_servico TEXT[],
+    vagas_por_hora INTEGER[],
     observacoes TEXT,
-    ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hospital FOREIGN KEY (hospital_id) REFERENCES hospitais(id)
-);
-
--- Inserir exemplo de configuração
-INSERT INTO horarios_config (
-    hospital_id,
-    tipo,
-    hora_inicio,
-    hora_fim,
-    num_profissionais,
-    atendimentos_por_hora,
-    dias_semana
-) VALUES 
--- Configuração para consultas (10 médicos, 2 consultas por hora cada = 20 consultas/hora)
-(1, 'consulta', '08:00', '17:00', 10, 2, ARRAY['segunda', 'terca', 'quarta', 'quinta', 'sexta']),
--- Configuração para exames (5 técnicos, 4 exames por hora cada = 20 exames/hora)
-(1, 'exame', '08:00', '17:00', 5, 4, ARRAY['segunda', 'terca', 'quarta', 'quinta', 'sexta']);
-
--- Inserir exemplo de horário
-INSERT INTO horario_hospitais (
-    hospital_id,
-    nome_hospital,
-    dias_semana,
-    horario_matriz,
-    tipo_servico,
-    vagas_por_hora,
-    observacoes
-) VALUES (
-    1,
-    'Hospital Exemplo',
-    ARRAY['segunda', 'terca', 'quarta', 'quinta', 'sexta'],
-    '{
-        "consultas": {
-            "manha": {
-                "inicio": "08:00",
-                "fim": "12:00",
-                "vagas_por_hora": 20
-            },
-            "tarde": {
-                "inicio": "14:00",
-                "fim": "17:00",
-                "vagas_por_hora": 15
-            }
-        },
-        "exames": {
-            "manha": {
-                "inicio": "07:00",
-                "fim": "11:00",
-                "vagas_por_hora": 10
-            },
-            "tarde": {
-                "inicio": "13:00",
-                "fim": "16:00",
-                "vagas_por_hora": 8
-            }
-        }
-    }'::jsonb,
-    ARRAY['consulta', 'exame'],
-    ARRAY[20, 10],
-    'Horários normais de funcionamento. Urgência 24h.'
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
