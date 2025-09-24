@@ -790,10 +790,10 @@ app.post("/horarios_hospital", async (req, res) => {
     const {
       hospital_id,
       nome_hospital = null,
-      dias_semana = null,        // espera array de strings
-      horario_matriz = null,     // espera objeto/array (JSON)
-      tipo_servico = null,       // espera array de strings
-      vagas_por_hora = null,     // espera array de ints
+      dias_semana = null,
+      horario_matriz = null,
+      tipo_servico = null,
+      vagas_por_hora = null,
       observacoes = null
     } = req.body;
 
@@ -870,5 +870,125 @@ app.delete("/horarios_hospital/:id", async (req, res) => {
   } catch (err) {
     console.error("Erro DELETE /horarios_hospital/:id", err);
     res.status(500).json({ error: "Erro ao remover registro" });
+  }
+});
+
+// ===== Endpoints para horarios_consulta =====
+app.get("/horarios_consulta", async (req, res) => {
+  const { unidade, hospital_id } = req.query;
+  try {
+    // garante tabela
+    await pool.query(`CREATE TABLE IF NOT EXISTS horarios_consulta (
+      id SERIAL PRIMARY KEY,
+      hospital_id INT,
+      dia_semana VARCHAR(20),
+      horario_inicio TIME,
+      horario_fim TIME,
+      vagas_por_hora INTEGER DEFAULT 1,
+      profissionais_disponiveis INTEGER,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    let query = "SELECT * FROM horarios_consulta";
+    const params = [];
+    if (unidade || hospital_id) {
+      query += " WHERE hospital_id = $1";
+      params.push(Number(unidade || hospital_id));
+    }
+    query += " ORDER BY criado_em DESC";
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro GET /horarios_consulta", err);
+    res.status(500).json({ error: "Erro ao buscar horarios_consulta" });
+  }
+});
+
+app.post("/horarios_consulta", async (req, res) => {
+  try {
+    const { hospital_id, dia_semana, horario_inicio, horario_fim, vagas_por_hora = 1, profissionais_disponiveis = null } = req.body;
+    if (!hospital_id || !dia_semana || !horario_inicio || !horario_fim) {
+      return res.status(400).json({ error: "Campos obrigatórios: hospital_id, dia_semana, horario_inicio, horario_fim" });
+    }
+    const result = await pool.query(
+      `INSERT INTO horarios_consulta (hospital_id, dia_semana, horario_inicio, horario_fim, vagas_por_hora, profissionais_disponiveis)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [Number(hospital_id), dia_semana, horario_inicio, horario_fim, Number(vagas_por_hora), profissionais_disponiveis]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro POST /horarios_consulta", err);
+    res.status(500).json({ error: "Erro ao criar horarios_consulta" });
+  }
+});
+
+app.delete("/horarios_consulta/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query("DELETE FROM horarios_consulta WHERE id = $1 RETURNING *", [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erro DELETE /horarios_consulta/:id", err);
+    res.status(500).json({ error: "Erro ao deletar horarios_consulta" });
+  }
+});
+
+// ===== Endpoints para horarios_exame =====
+app.get("/horarios_exame", async (req, res) => {
+  const { unidade, hospital_id } = req.query;
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS horarios_exame (
+      id SERIAL PRIMARY KEY,
+      hospital_id INT,
+      dia_semana VARCHAR(20),
+      horario_inicio TIME,
+      horario_fim TIME,
+      vagas_por_hora INTEGER DEFAULT 1,
+      salas_disponiveis INTEGER,
+      tipo_exame VARCHAR(255),
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    let query = "SELECT * FROM horarios_exame";
+    const params = [];
+    if (unidade || hospital_id) {
+      query += " WHERE hospital_id = $1";
+      params.push(Number(unidade || hospital_id));
+    }
+    query += " ORDER BY criado_em DESC";
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro GET /horarios_exame", err);
+    res.status(500).json({ error: "Erro ao buscar horarios_exame" });
+  }
+});
+
+app.post("/horarios_exame", async (req, res) => {
+  try {
+    const { hospital_id, dia_semana, horario_inicio, horario_fim, vagas_por_hora = 1, salas_disponiveis = null, tipo_exame = null } = req.body;
+    if (!hospital_id || !dia_semana || !horario_inicio || !horario_fim) {
+      return res.status(400).json({ error: "Campos obrigatórios: hospital_id, dia_semana, horario_inicio, horario_fim" });
+    }
+    const result = await pool.query(
+      `INSERT INTO horarios_exame (hospital_id, dia_semana, horario_inicio, horario_fim, vagas_por_hora, salas_disponiveis, tipo_exame)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [Number(hospital_id), dia_semana, horario_inicio, horario_fim, Number(vagas_por_hora), salas_disponiveis, tipo_exame]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro POST /horarios_exame", err);
+    res.status(500).json({ error: "Erro ao criar horarios_exame" });
+  }
+});
+
+app.delete("/horarios_exame/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query("DELETE FROM horarios_exame WHERE id = $1 RETURNING *", [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erro DELETE /horarios_exame/:id", err);
+    res.status(500).json({ error: "Erro ao deletar horarios_exame" });
   }
 });

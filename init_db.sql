@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS hospital_schedules (
     patients_per_slot INT NOT NULL,
     UNIQUE(hospital_id, time_slot, type)
 
-    
+
 );
 CREATE TABLE IF NOT EXISTS horarios_hospital (
     id SERIAL PRIMARY KEY,
@@ -171,5 +171,33 @@ CREATE TABLE IF NOT EXISTS horarios_hospital (
     tipo_servico TEXT[],
     vagas_por_hora INTEGER[],
     observacoes TEXT,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS horarios_consulta (
+    id SERIAL PRIMARY KEY,
+    hospital_id INT REFERENCES hospitais(id) ON DELETE CASCADE,
+    dia_semana VARCHAR(20) NOT NULL,
+    horario_inicio TIME NOT NULL,
+    horario_fim TIME NOT NULL,
+    vagas_por_hora INTEGER DEFAULT 1,
+    profissionais_disponiveis INTEGER DEFAULT 1,
+    ativo BOOLEAN DEFAULT true,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- Tabela de Horários de Exame
+-- ==============================
+CREATE TABLE IF NOT EXISTS horarios_exame (
+    id SERIAL PRIMARY KEY,
+    hospital_id INT REFERENCES hospitais(id) ON DELETE CASCADE,
+    dia_semana VARCHAR(20) NOT NULL,
+    horario_inicio TIME NOT NULL,
+    horario_fim TIME NOT NULL,
+    salas_disponiveis INTEGER DEFAULT 1,
+    vagas_por_hora INTEGER DEFAULT 1,
+    tipo_exame VARCHAR(100),
+    ativo BOOLEAN DEFAULT true,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
